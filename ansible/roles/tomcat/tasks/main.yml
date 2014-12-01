@@ -1,0 +1,61 @@
+---
+
+- name: install packages 
+  apt: name={{ item }} state=present
+  with_items:
+    - unzip
+    - git
+    # java
+    - openjdk-7-jre
+    - openjdk-7-jdk
+    - ant
+    # tomcat
+    - tomcat7
+    - tomcat7-admin
+    # other
+    - vim
+    - tmux
+
+- name: add group tomcat
+  group: name=tomcat
+
+- name: add user tomcat
+  user: name=tomcat group=tomcat home=/usr/share/tomcat shell=/bin/bash password=$6$rounds=100000$kUXavxUtGJ5Bg5T9$PwG5mM/r/2YqNSGsmBEMiw/hS5AHsO0U5VIVBrYHdTTA/vr2ejO5.74wIgoed2adhBua1370fEGUC5L0E0HQQ0
+  sudo: True
+
+- name: change ownership of tomcat installation
+  file: path=/etc/tomcat7 owner=tomcat group=tomcat state=directory recurse=true
+
+- name: start tomcat
+  service: name=tomcat7 state=started enabled=yes
+
+- name: configure tomcat server
+  template: src=server.xml dest=/etc/tomcat7/ backup=yes
+  notify: restart tomcat
+
+- name: configure tomcat users 
+  template: src=tomcat-users.xml dest=/etc/tomcat7/
+  notify: restart tomcat
+
+# grails
+
+- name: check if gvm is installed
+  shell: test -d /usr/share/tomcat/.gvm && echo "yes" || echo "no"
+  register: is_gvm_installed
+
+- name: download gvm
+  when: is_gvm_installed.stdout == "no"
+  get_url: url=http://get.gvmtool.net dest=/usr/share/tomcat/gvm_install.sh
+  remote_user: tomcat
+
+- name: install gvm
+  when: is_gvm_installed.stdout == "no"
+  command: bash /usr/share/tomcat/gvm_install.sh
+  sudo: yes
+  sudo_user: tomcat
+
+- name: install grails
+  # probably not the most elegant way to have .bashrc sourced but that'll do for now...
+  shell: bash -lc "yes | gvm install grails 2.4.3; gvm default grails 2.4.3" executable=/bin/bash chdir=/usr/share/tomcat/
+  sudo: yes
+  sudo_user: tomcat
