@@ -3,6 +3,8 @@ package web.api
 class HelloController {
 
     def index() {
-	return "Hello World! xxx";
+	    //return [hello: "Hello World!"];
+        def hello = 1;
+        return [ hello: hello ];
     }
 }

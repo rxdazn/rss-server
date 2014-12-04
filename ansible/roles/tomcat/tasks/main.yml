@@ -12,6 +12,9 @@
     # tomcat
     - tomcat7
     - tomcat7-admin
+    # db
+    - postgresql-9.1
+    - python-psycopg2 # postgresql_user
     # other
     - vim
     - tmux
@@ -22,6 +25,26 @@
 - name: add user tomcat
   user: name=tomcat group=tomcat home=/usr/share/tomcat shell=/bin/bash password=$6$rounds=100000$kUXavxUtGJ5Bg5T9$PwG5mM/r/2YqNSGsmBEMiw/hS5AHsO0U5VIVBrYHdTTA/vr2ejO5.74wIgoed2adhBua1370fEGUC5L0E0HQQ0
   sudo: True
+
+# probably not a very bright idea
+- name: add user postgres to sudoers
+  user: name=postgres groups=postgres,sudo
+  sudo: True
+
+- name: add user rssreader
+  user: name=rssreader group=postgres home=/home/rssreader shell=/bin/bash password=$6$rounds=100000$bKBN6i/Tq4ImZltg$6ITdspT9SnUtQI8SZT5/K4zMSCegYhouTB4hwW2NqEDQmXTSsS9tHXphiD7CzIsLRbVaYHe9XCx0Zt4lK52Ey0
+  sudo: True
+
+- name: add rssreader postgres role
+  postgresql_user: name=rssreader password=rssreader encrypted=false role_attr_flags=CREATEDB,SUPERUSER state=present
+  sudo: True
+  sudo_user: postgres
+
+- name: create rssreader postgres database
+  postgresql_db: name=rssreader owner=rssreader encoding='UTF-8' state=present
+  sudo: True
+  sudo_user: postgres
+# tomcat
 
 - name: change ownership of tomcat installation
   file: path=/etc/tomcat7 owner=tomcat group=tomcat state=directory recurse=true
@@ -36,6 +59,10 @@
 - name: configure tomcat users 
   template: src=tomcat-users.xml dest=/etc/tomcat7/
   notify: restart tomcat
+
+# postgres
+- name: start postgresql 
+  service: name=postgresql state=started enabled=yes
 
 # grails
 
